@@ -27,7 +27,7 @@ class ImagePublisher(Node):
         # self._camera_name = "front_center"
         self._camera_name = "bottom_center"
         self._camera_frame_id = "realsense"
-        self._vehicle_name = "PX4"
+        self._vehicle_name = self.get_namespace().split("/")[1]
 
         # ROS Publishers
         # self._pub_ir = self.create_publisher(Image, "ir/image_raw", 1)
