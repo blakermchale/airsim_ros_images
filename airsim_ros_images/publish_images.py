@@ -72,7 +72,12 @@ class ImagePublisher(Node):
         if self._vehicle_name not in self._cam_info_msgs.keys():
             self._cam_info_msgs[self._vehicle_name] = {}
             cam_info = self._airsim_client.simGetCameraInfo(self._camera_name, self._vehicle_name)
-            self.get_logger().info(f"{cam_info.proj_mat}")
+            d_params = self._airsim_client.simGetDistortionParams(self._camera_name, self._vehicle_name)
+            self.get_logger().info(f"{d_params}")
+            self.get_logger().info(f"""
+            HFOV: {cam_info.fov},
+            PROJ: {cam_info.proj_mat}
+            """)
             # TODO: implement multiple cameras for each lens on realsense and update this method
             self._cam_info_msgs[self._vehicle_name]["color"] = construct_info(header, cam_info, color_response.height, color_response.width)
             # self._cam_info_msgs[self._vehicle_name]["ir"] = self._cam_info_msgs[self._vehicle_name]["color"]
@@ -104,8 +109,7 @@ def construct_info(header: Header, info: SimCameraInfo, height: int, width: int)
     msg = CameraInfo()
 
     Tx = 0.0  # Assumed for now since we are not using stereo
-    hfov = info.fov
-    print(info.proj_mat)
+    hfov = np.deg2rad(info.fov)
 
     # https://github.com/microsoft/AirSim-NeurIPS2019-Drone-Racing/issues/86
     f = width / (2 * np.tan(0.5 * hfov))
@@ -120,9 +124,9 @@ def construct_info(header: Header, info: SimCameraInfo, height: int, width: int)
     ]).flatten()
 
     R = np.array([
-        [1.0, 0.0, 0.0],
-        [0.0, 1.0, 0.0],
-        [0.0, 0.0, 1.0]
+        [0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0]
     ]).flatten()
 
     P = np.array([
@@ -149,7 +153,7 @@ def construct_image(header: Header, response: ImageResponse, encoding: str) -> I
     msg.encoding = encoding
     msg.height = response.height
     msg.width = response.width
-    msg.data = response.image_data_uint8 if response.image_type != ImageType.DepthPlanner else response.image_data_float
+    msg.data = response.image_data_uint8 if response.image_type != ImageType.DepthPlanar else response.image_data_float
     msg.is_bigendian = 0
     msg.step = response.width * 3
     return msg
